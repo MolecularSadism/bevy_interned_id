@@ -1,6 +1,6 @@
 [package]
 name = "msg_interned_id"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 authors = ["ffmulks <63452434+ffmulks@users.noreply.github.com>"]
 description = "Derive macro for generating interned string ID types with optional Bevy and serde integration"
@@ -23,7 +23,11 @@ syn = { version = "2.0", features = ["full", "parsing"] }
 
 [dev-dependencies]
 # Use individual bevy sub-crates to avoid system dependencies (wayland, etc.)
-bevy_ecs = "0.18"
-bevy_reflect = "0.18"
+bevy_ecs = "0.19"
+bevy_reflect = "0.19"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# The `bevy` facade (without default features, so no windowing/render/system
+# deps) is used only to compile and run the README doc tests, which reference
+# `bevy::*` paths exactly as a downstream user would.
+bevy = { version = "0.19", default-features = false }
