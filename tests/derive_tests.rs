@@ -1,4 +1,4 @@
-//! Comprehensive tests for the InternedId derive macro with Bevy 0.17.
+//! Comprehensive tests for the InternedId derive macro with Bevy 0.19.
 
 // Create a facade module that mirrors the bevy crate structure
 // This allows the generated code (which uses bevy::* paths) to work
@@ -546,5 +546,121 @@ mod thread_safety {
         for id in &ids {
             assert_eq!(id.as_str() as *const str, first_ptr);
         }
+    }
+}
+
+/// Regression tests targeting the surfaces most likely to shift with the Bevy
+/// 0.19 upgrade, per the 0.18 -> 0.19 migration guide.
+///
+/// The relevant items are:
+/// - **`bevy_reflect` reorganization**: many items moved into kind-specific
+///   modules at the crate root. This crate relies on `TypeInfo::Opaque`,
+///   `OpaqueInfo`, `utility::NonGenericTypeInfoCell`, and the full
+///   `PartialReflect`/`Reflect` hierarchy still being reachable and behaving
+///   identically.
+/// - **`Interned<T>` now requires `T: Internable`**: `str` satisfies this, so
+///   `Interned<str>` newtypes must keep interning and deduplicating correctly.
+/// - **Resources now implement `Component`** and reflection type-data changes:
+///   the registered `ReflectFromReflect`, `ReflectFromPtr`, and `ReflectDefault`
+///   data must still round-trip values.
+/// - **Component mutability model**: derived components must remain mutable and
+///   support insert / mutate-in-place / remove through the `World`.
+mod bevy_0_19_migration {
+    use super::*;
+    use bevy_reflect::{ReflectFromReflect, TypeInfo};
+
+    /// The interner must keep deduplicating identical `&str`s to a single
+    /// pointer even when many distinct strings are interned in between. This
+    /// exercises the `str: Internable` path that Bevy 0.19 now requires.
+    #[test]
+    fn test_internable_str_pointer_stability() {
+        let first = TestId::new("stable_key");
+        // Intern a large number of unrelated strings to churn the interner.
+        for i in 0..2000 {
+            let _ = TestId::new(&format!("filler_{i}"));
+        }
+        let second = TestId::new("stable_key");
+
+        assert_eq!(first, second);
+        assert!(std::ptr::eq(first.as_str(), second.as_str()));
+    }
+
+    /// The opaque `TypeInfo` produced through `utility::NonGenericTypeInfoCell`
+    /// must survive the `bevy_reflect` module reorganization and remain stable
+    /// across calls (the cell caches a single `'static` instance).
+    #[test]
+    fn test_opaque_type_info_is_stable() {
+        let a = TestId::type_info();
+        let b = TestId::type_info();
+        assert!(matches!(a, TypeInfo::Opaque(_)));
+        // Same cached instance returned on every call.
+        assert!(std::ptr::eq(a, b));
+    }
+
+    /// `ReflectFromReflect` type-data, registered by the generated
+    /// `GetTypeRegistration` impl, must reconstruct a concrete value from a
+    /// `&dyn PartialReflect` through the `TypeRegistry`.
+    #[test]
+    fn test_from_reflect_type_data_roundtrip() {
+        let mut registry = TypeRegistry::new();
+        registry.register::<TestId>();
+
+        let registration = registry.get(std::any::TypeId::of::<TestId>()).unwrap();
+        let from_reflect = registration.data::<ReflectFromReflect>().unwrap();
+
+        let original = TestId::new("type_data_roundtrip");
+        let reconstructed = from_reflect.from_reflect(&original).unwrap();
+
+        let downcast = reconstructed.downcast_ref::<TestId>();
+        assert!(downcast.is_some());
+        assert_eq!(*downcast.unwrap(), original);
+    }
+
+    /// `ReflectDefault` type-data must still yield the empty-string default
+    /// through the registry (unchanged by the resources-as-components work).
+    #[test]
+    fn test_reflect_default_type_data() {
+        let mut registry = TypeRegistry::new();
+        registry.register::<TestId>();
+
+        let registration = registry.get(std::any::TypeId::of::<TestId>()).unwrap();
+        let reflect_default = registration.data::<ReflectDefault>().unwrap();
+
+        let value = reflect_default.default();
+        let downcast = value.downcast_ref::<TestId>();
+        assert!(downcast.is_some());
+        assert_eq!(downcast.unwrap().as_str(), "");
+    }
+
+    /// Derived components must remain mutable: insert, mutate in place through a
+    /// `&mut` query access, then remove. Bevy 0.19 made `Resource: Component`
+    /// and reworked the mutability model, so this guards the ordinary
+    /// (mutable) component path our macro relies on.
+    #[test]
+    fn test_component_insert_mutate_remove() {
+        let mut world = World::new();
+        let entity = world.spawn(ComponentId::new("before")).id();
+
+        // Mutate in place via mutable access.
+        {
+            let mut comp = world.get_mut::<ComponentId>(entity).unwrap();
+            *comp = ComponentId::new("after");
+        }
+        assert_eq!(world.get::<ComponentId>(entity).unwrap().as_str(), "after");
+
+        // Remove the component.
+        world.entity_mut(entity).remove::<ComponentId>();
+        assert!(world.get::<ComponentId>(entity).is_none());
+    }
+
+    /// `reflect_clone` must produce a fully-typed `Box<dyn Reflect>` that
+    /// downcasts back to the concrete type and compares equal to the source.
+    #[test]
+    fn test_reflect_clone_produces_typed_value() {
+        let id = TestId::new("clone_source");
+        let cloned: Box<dyn Reflect> = id.reflect_clone().unwrap();
+
+        assert!(cloned.as_reflect().is::<TestId>());
+        assert_eq!(*cloned.downcast_ref::<TestId>().unwrap(), id);
     }
 }

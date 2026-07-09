@@ -1,75 +1,8 @@
-//! Derive macro for generating interned string ID types with Bevy integration.
-//!
-//! This crate provides the `InternedId` derive macro which generates complete ID types
-//! using Bevy's string interning system for efficient string comparison and memory usage.
-//! Interned strings are deduplicated at runtime, meaning identical strings share the same
-//! memory location and can be compared with simple pointer equality.
-//!
-//! # Features
-//!
-//! - **Zero-cost abstraction**: String comparisons become pointer comparisons
-//! - **Type safety**: Prevents mixing different ID types (e.g., `SpellId` vs `ItemId`)
-//! - **Full Bevy integration**: Reflection, serialization, and ECS component support
-//! - **Developer-friendly**: Inspector UI support in development builds
-//!
-//! # Basic Usage
-//!
-//! ```rust,ignore
-//! use msg_interned_id::InternedId;
-//! use bevy::prelude::*;
-//!
-//! #[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-//! pub struct SpellId(bevy::ecs::intern::Interned<str>);
-//!
-//! // Create IDs from strings
-//! let id = SpellId::new("energy_bolt");
-//! assert_eq!(id.as_str(), "energy_bolt");
-//!
-//! // Efficient comparison (pointer equality)
-//! let id2 = SpellId::new("energy_bolt");
-//! assert_eq!(id, id2); // Fast pointer comparison
-//!
-//! // Works with Display
-//! println!("Spell: {}", id); // Prints: "energy_bolt"
-//! ```
-//!
-//! # Use Cases
-//!
-//! Perfect for game development scenarios where you need:
-//! - Asset identifiers (`SpellId`, `ItemId`, `EnemyId`)
-//! - Configuration keys
-//! - Event types
-//! - State machine states
-//! - Any string-based identifier that needs frequent comparison
-//!
-//! # Generated Implementations
-//!
-//! The macro automatically generates:
-//!
-//! ## Core Functionality
-//! - `new(&str) -> Self` - Create ID from string (interns the string)
-//! - `as_str(&self) -> &'static str` - Get the string value
-//!
-//! ## Standard Traits
-//! - `Display` - Format as the string value
-//! - `From<&str>` and `From<String>` - Convenient conversions
-//! - `Deref<Target = str>` - Use as string slice with deref coercion
-//! - `Default` - Empty string default
-//!
-//! ## Serialization
-//! - `Serialize` and `Deserialize` (serde) - JSON/RON serialization support
-//!
-//! ## Bevy Integration
-//! - Full reflection hierarchy: `PartialReflect`, `Reflect`, `Typed`, `TypePath`
-//! - `FromReflect` - Create from reflected values
-//! - `GetTypeRegistration` - Type registry support with `ReflectDefault`
-//! - `#[cfg(feature = "dev")]` Inspector UI for bevy-inspector-egui
-//!
-//! ## Notes
-//!
-//! - You must manually derive: `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `Debug`
-//! - For ECS components, derive `Component` separately
-//! - Each ID type has its own interner (no cross-type collisions)
+//! The crate-level documentation below is sourced directly from `README.md`
+//! via [`include_str!`], keeping the README and the rustdoc landing page in
+//! sync from a single source of truth. The Rust examples in the README are
+//! compiled and executed as doc tests (see the `bevy` dev-dependency).
+#![doc = include_str!("../README.md")]
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
@@ -397,7 +330,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 ///
 /// ## Basic Usage
 ///
-/// ```rust,ignore
+/// ```rust
 /// use msg_interned_id::InternedId;
 /// use bevy::prelude::*;
 ///
@@ -411,7 +344,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 ///
 /// ## As ECS Component
 ///
-/// ```rust,ignore
+/// ```rust
 /// use msg_interned_id::InternedId;
 /// use bevy::prelude::*;
 ///
@@ -421,20 +354,26 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 /// fn spawn_item(mut commands: Commands) {
 ///     commands.spawn(ItemId::new("health_potion"));
 /// }
+///
+/// // `spawn_item` is a valid Bevy system:
+/// bevy::ecs::system::assert_is_system(spawn_item);
 /// ```
 ///
 /// ## With Serialization
 ///
-/// ```rust,ignore
+/// ```rust
 /// use msg_interned_id::InternedId;
 /// use bevy::prelude::*;
-/// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
 /// pub struct QuestId(bevy::ecs::intern::Interned<str>);
 ///
-/// // Serializes as: "main_quest"
-/// // Deserializes from: "main_quest"
+/// // Serializes as: "main_quest", deserializes from: "main_quest"
+/// let quest = QuestId::new("main_quest");
+/// let json = serde_json::to_string(&quest).unwrap();
+/// assert_eq!(json, "\"main_quest\"");
+/// let restored: QuestId = serde_json::from_str(&json).unwrap();
+/// assert_eq!(quest, restored);
 /// ```
 #[proc_macro_derive(InternedId)]
 pub fn derive_interned_id(input: TokenStream) -> TokenStream {
