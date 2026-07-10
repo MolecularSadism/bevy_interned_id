@@ -1,5 +1,10 @@
 # msg_interned_id
 
+[![CI](https://github.com/MolecularSadism/bevy_interned_id/workflows/CI/badge.svg)](https://github.com/MolecularSadism/bevy_interned_id/actions)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://github.com/MolecularSadism/bevy_interned_id#license)
+[![Bevy](https://img.shields.io/badge/Bevy-0.19-blue.svg)](https://bevyengine.org/)
+[![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
+
 Derive macro for generating interned string ID types with full Bevy integration.
 
 ## Features
