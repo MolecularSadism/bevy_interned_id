@@ -105,7 +105,10 @@ fn demo_basic_ids() {
 
     // IDs can be used as string slices via Deref
     assert!(fireball.starts_with("fire"));
-    println!("fireball starts with 'fire': {}", fireball.starts_with("fire"));
+    println!(
+        "fireball starts with 'fire': {}",
+        fireball.starts_with("fire")
+    );
 
     // Default creates an empty ID
     let empty_id = SpellId::default();
@@ -178,9 +181,7 @@ fn demo_pattern_matching() {
         _ => 1.0,
     };
 
-    println!(
-        "Spell '{spell_id}' has damage multiplier: {damage_multiplier}"
-    );
+    println!("Spell '{spell_id}' has damage multiplier: {damage_multiplier}");
 
     // Also works in if-let patterns
     if spell_id.as_str() == "fireball" {
@@ -200,8 +201,7 @@ fn demo_serialization() {
     println!("Serialized: {json}");
 
     // Deserialize from JSON
-    let deserialized: SpellId =
-        serde_json::from_str(&json).expect("Failed to deserialize");
+    let deserialized: SpellId = serde_json::from_str(&json).expect("Failed to deserialize");
     println!("Deserialized: {deserialized}");
 
     // Verify roundtrip
@@ -228,36 +228,21 @@ fn demo_ecs_integration() {
 
     // Spawn some enemies with IDs
     let goblin_entity = world
-        .spawn((
-            EnemyId::new("goblin"),
-            Health(50),
-            Damage(10),
-        ))
+        .spawn((EnemyId::new("goblin"), Health(50), Damage(10)))
         .id();
 
     let dragon_entity = world
-        .spawn((
-            EnemyId::new("dragon"),
-            Health(500),
-            Damage(75),
-        ))
+        .spawn((EnemyId::new("dragon"), Health(500), Damage(75)))
         .id();
 
-    world.spawn((
-        EnemyId::new("skeleton"),
-        Health(30),
-        Damage(15),
-    ));
+    world.spawn((EnemyId::new("skeleton"), Health(30), Damage(15)));
 
     // Query entities by their ID
     let mut query = world.query::<(&EnemyId, &Health, &Damage)>();
 
     println!("Spawned enemies:");
     for (enemy_id, health, damage) in query.iter(&world) {
-        println!(
-            "  - {}: {} HP, {} damage",
-            enemy_id, health.0, damage.0
-        );
+        println!("  - {}: {} HP, {} damage", enemy_id, health.0, damage.0);
     }
 
     // Get a specific entity's ID

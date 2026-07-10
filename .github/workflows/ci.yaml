@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    # Reusable CI workflow from the msg_ci_templates repository.
+    # NOTE: pinned to the branch that introduces the stable-toolchain template;
+    # switch to `@main` once that change is merged.
+    uses: MolecularSadism/msg_ci_templates/.github/workflows/bevy-0.18-ci.yaml@claude/ci-pipeline-template-link-dgt0ee
+    with:
+      # Build/test on stable Rust.
+      rust-toolchain: stable
+      # This crate is a proc-macro crate whose only non-default feature (`dev`)
+      # emits `bevy_inspector_egui` references into downstream code and is not
+      # meant to be compiled here, so CI uses the default feature set.
+      cargo-features: ''
+      # bevy-lint requires a nightly toolchain (cranelift codegen backend);
+      # disabled to keep this pipeline fully on stable.
+      bevy-lint-enabled: false
