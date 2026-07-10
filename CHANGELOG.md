@@ -5,12 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-07-09
+## [0.4.0] - 2026-07-10
 
-Compatibility bump from Bevy 0.18 to **Bevy 0.19**.
+Renamed the crate to **`bevy_interned_id`** and bumped compatibility from Bevy
+0.18 to **Bevy 0.19**. This is the first release under the `bevy_interned_id`
+name.
 
 ### Changed
 
+- **Renamed the crate from `msg_interned_id` to `bevy_interned_id`** to make its
+  Bevy focus explicit. Update your dependency name in `Cargo.toml` and your
+  imports from `use msg_interned_id::InternedId;` to
+  `use bevy_interned_id::InternedId;`. The derive macro, generated API, and all
+  behavior are otherwise unchanged.
 - Updated the development/target Bevy version to `0.19`
   (`bevy_ecs` and `bevy_reflect` dev-dependencies bumped from `0.18` to `0.19`).
 - Now requires **Rust 1.95 or newer**, as mandated by Bevy 0.19.
@@ -91,7 +98,7 @@ Initial release, compatible with **Bevy 0.16**.
   `Default`, serde `Serialize` / `Deserialize`, the full Bevy reflection
   hierarchy, and optional `bevy-inspector-egui` support.
 
-[0.4.0]: https://github.com/MolecularSadism/msg_interned_id/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/MolecularSadism/msg_interned_id/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/MolecularSadism/msg_interned_id/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/MolecularSadism/msg_interned_id/releases/tag/v0.1.0
+[0.4.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/MolecularSadism/bevy_interned_id/releases/tag/v0.1.0

@@ -1,4 +1,4 @@
-//! Comprehensive tests for the InternedId derive macro with Bevy 0.19.
+//! Comprehensive tests for the `InternedId` derive macro with Bevy 0.19.
 
 // Create a facade module that mirrors the bevy crate structure
 // This allows the generated code (which uses bevy::* paths) to work
@@ -23,7 +23,7 @@ use bevy::reflect::{
 };
 use bevy_ecs::world::World;
 use bevy_reflect::TypeRegistry;
-use msg_interned_id::InternedId;
+use bevy_interned_id::InternedId;
 use std::collections::{HashMap, HashSet};
 
 /// Test ID type for basic functionality.
@@ -92,13 +92,13 @@ mod standard_traits {
     #[test]
     fn test_display() {
         let id = TestId::new("display_test");
-        assert_eq!(format!("{}", id), "display_test");
+        assert_eq!(format!("{id}"), "display_test");
     }
 
     #[test]
     fn test_debug() {
         let id = TestId::new("debug_test");
-        let debug_str = format!("{:?}", id);
+        let debug_str = format!("{id:?}");
         assert!(debug_str.contains("TestId"));
     }
 
@@ -376,9 +376,9 @@ mod reflection {
 
     #[test]
     fn test_debug_format() {
+        use std::fmt::Write;
         let id = TestId::new("debug_fmt");
         let mut output = String::new();
-        use std::fmt::Write;
         write!(&mut output, "{:?}", id.as_partial_reflect()).ok();
         // The debug output should contain the type name and value
         assert!(output.contains("TestId") || output.contains("debug_fmt"));
@@ -441,7 +441,7 @@ mod ecs_integration {
         world.spawn(ComponentId::new("third"));
 
         let mut query = world.query::<&ComponentId>();
-        let ids: Vec<_> = query.iter(&world).map(|id| id.as_str()).collect();
+        let ids: Vec<_> = query.iter(&world).map(super::ComponentId::as_str).collect();
 
         assert_eq!(ids.len(), 3);
         assert!(ids.contains(&"first"));
@@ -485,6 +485,7 @@ mod edge_cases {
     }
 
     #[test]
+    #[allow(clippy::float_cmp)] // comparing against the exact literal the match arm returns
     fn test_match_pattern() {
         let id = TestId::new("fire");
         let result = match &*id {
@@ -508,7 +509,7 @@ mod thread_safety {
             .map(|i| {
                 thread::spawn(move || {
                     for j in 0..100 {
-                        let id = TestId::new(&format!("id_{}_{}", i, j));
+                        let id = TestId::new(&format!("id_{i}_{j}"));
                         assert!(id.as_str().starts_with("id_"));
                     }
                 })
@@ -542,9 +543,9 @@ mod thread_safety {
         }
 
         // All should point to the same interned string
-        let first_ptr = ids[0].as_str() as *const str;
+        let first_ptr = std::ptr::from_ref::<str>(ids[0].as_str());
         for id in &ids {
-            assert_eq!(id.as_str() as *const str, first_ptr);
+            assert_eq!(std::ptr::from_ref::<str>(id.as_str()), first_ptr);
         }
     }
 }

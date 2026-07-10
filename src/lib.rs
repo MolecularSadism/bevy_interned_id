@@ -1,7 +1,3 @@
-//! The crate-level documentation below is sourced directly from `README.md`
-//! via [`include_str!`], keeping the README and the rustdoc landing page in
-//! sync from a single source of truth. The Rust examples in the README are
-//! compiled and executed as doc tests (see the `bevy` dev-dependency).
 #![doc = include_str!("../README.md")]
 
 use proc_macro::TokenStream;
@@ -331,7 +327,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 /// ## Basic Usage
 ///
 /// ```rust
-/// use msg_interned_id::InternedId;
+/// use bevy_interned_id::InternedId;
 /// use bevy::prelude::*;
 ///
 /// #[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -345,7 +341,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 /// ## As ECS Component
 ///
 /// ```rust
-/// use msg_interned_id::InternedId;
+/// use bevy_interned_id::InternedId;
 /// use bevy::prelude::*;
 ///
 /// #[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -362,7 +358,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 /// ## With Serialization
 ///
 /// ```rust
-/// use msg_interned_id::InternedId;
+/// use bevy_interned_id::InternedId;
 /// use bevy::prelude::*;
 ///
 /// #[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]

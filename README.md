@@ -1,11 +1,11 @@
-# msg_interned_id
+# `bevy_interned_id`
 
 Derive macro for generating interned string ID types with full Bevy integration.
 
 ## Features
 
 - **Zero-cost abstraction**: String comparisons become pointer comparisons
-- **Type safety**: Prevents mixing different ID types (e.g., SpellId vs ItemId)
+- **Type safety**: Prevents mixing different ID types (e.g., `SpellId` vs `ItemId`)
 - **Full Bevy integration**: Reflection, serialization, and ECS component support
 - **Developer-friendly**: Inspector UI support in development builds
 - **Efficient memory**: Identical strings are deduplicated and share memory
@@ -24,14 +24,14 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-msg_interned_id = "0.4"
+bevy_interned_id = "0.4"
 bevy = "0.19"
 ```
 
 ## Quick Start
 
 ```rust
-use msg_interned_id::InternedId;
+use bevy_interned_id::InternedId;
 use bevy::prelude::*;
 
 // Define your ID type
@@ -56,7 +56,7 @@ assert_eq!(fireball.as_str(), "fireball");
 ### As ECS Component
 
 ```rust
-use msg_interned_id::InternedId;
+use bevy_interned_id::InternedId;
 use bevy::prelude::*;
 
 #[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -80,7 +80,7 @@ fn query_items(q_items: Query<&ItemId>) {
 
 ```rust
 use std::collections::HashMap;
-use msg_interned_id::InternedId;
+use bevy_interned_id::InternedId;
 use bevy::prelude::*;
 
 #[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -96,7 +96,7 @@ assert_eq!(enemy_hp[&EnemyId::new("goblin")], 50);
 ### Serialization
 
 ```rust
-use msg_interned_id::InternedId;
+use bevy_interned_id::InternedId;
 use bevy::prelude::*;
 use serde::{Serialize, Deserialize};
 
@@ -131,7 +131,7 @@ assert_eq!(
 ### With Match and Deref
 
 ```rust
-use msg_interned_id::InternedId;
+use bevy_interned_id::InternedId;
 use bevy::prelude::*;
 
 #[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -170,10 +170,10 @@ You must manually derive: `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `Debug`
 ## Use Cases
 
 Perfect for:
-- **Asset identifiers**: SpellId, ItemId, EnemyId, SoundId
+- **Asset identifiers**: `SpellId`, `ItemId`, `EnemyId`, `SoundId`
 - **Configuration keys**: Settings, feature flags
-- **Event types**: GameEvent, NetworkMessage
-- **State machine states**: PlayerState, AIState
+- **Event types**: `GameEvent`, `NetworkMessage`
+- **State machine states**: `PlayerState`, `AIState`
 - **Any string-based identifier needing frequent comparison**
 
 ## Performance
@@ -199,7 +199,7 @@ The generated types work seamlessly with Bevy's systems:
 1. **One interner per ID type**: Each ID type gets its own interner (no cross-contamination)
 2. **Use for identifiers**: Best for values compared frequently, not for arbitrary user text
 3. **Not for dynamic content**: Interned strings live for the program lifetime
-4. **Type safety**: Create separate types (SpellId, ItemId) instead of generic `Id` type
+4. **Type safety**: Create separate types (`SpellId`, `ItemId`) instead of generic `Id` type
 
 ## Comparison with Alternatives
 
@@ -214,7 +214,7 @@ Choose `InternedId` when you need the flexibility of strings with the performanc
 
 ## Bevy Version Compatibility
 
-| `msg_interned_id` | Bevy |
+| `bevy_interned_id` | Bevy |
 |-------------------|------|
 | 0.4               | 0.19 |
 | 0.3               | 0.18 |
@@ -223,8 +223,12 @@ Choose `InternedId` when you need the flexibility of strings with the performanc
 
 ### Migration from 0.3 to 0.4
 
-The 0.4 release updates compatibility from Bevy 0.18 to Bevy 0.19. Key points:
+The 0.4 release renames the crate and updates compatibility from Bevy 0.18 to
+Bevy 0.19. Key points:
 
+- **Crate renamed** from `msg_interned_id` to `bevy_interned_id`. Rename the
+  dependency in your `Cargo.toml` and update imports from
+  `use msg_interned_id::InternedId;` to `use bevy_interned_id::InternedId;`.
 - **No breaking changes** to the public API of generated types. The `new`,
   `as_str`, `Display`, `From`, `Deref`, `Default`, serde, and reflection
   surfaces are unchanged.
@@ -242,7 +246,7 @@ The 0.4 release updates compatibility from Bevy 0.18 to Bevy 0.19. Key points:
 To migrate, update your `Cargo.toml`:
 
 ```toml
-msg_interned_id = "0.4"
+bevy_interned_id = "0.4"
 bevy = "0.19"
 ```
 
@@ -256,13 +260,13 @@ The 0.3 release updates compatibility from Bevy 0.17 to Bevy 0.18. Key changes:
   `#[cfg(feature = "dev")]` into user code. Enable it with:
 
   ```toml
-  msg_interned_id = { version = "0.3", features = ["dev"] }
+  bevy_interned_id = { version = "0.3", features = ["dev"] }
   ```
 
 To migrate, simply update your `Cargo.toml`:
 
 ```toml
-msg_interned_id = "0.3"
+bevy_interned_id = "0.3"
 bevy = "0.18"
 ```
 
@@ -278,7 +282,7 @@ The 0.2 release updates compatibility from Bevy 0.16 to Bevy 0.17. Key changes:
 To migrate, simply update your `Cargo.toml`:
 
 ```toml
-msg_interned_id = "0.2"
+bevy_interned_id = "0.2"
 bevy = "0.17"
 ```
 

@@ -1,9 +1,9 @@
-//! Example demonstrating msg_interned_id usage in a game-like scenario.
+//! Example demonstrating `bevy_interned_id` usage in a game-like scenario.
 //!
 //! This example shows how to use interned string IDs for game entities,
 //! spells, and items with full Bevy ECS integration.
 //!
-//! Run with: cargo run --example game_ids
+//! Run with: `cargo run --example game_ids`
 //!
 //! Note: This example uses minimal Bevy dependencies and runs without a window,
 //! making it suitable for CI and headless environments.
@@ -26,7 +26,7 @@ mod bevy {
 
 use bevy::prelude::*;
 use bevy_ecs::world::World;
-use msg_interned_id::InternedId;
+use bevy_interned_id::InternedId;
 use std::collections::HashMap;
 
 // Define various ID types for a game
@@ -59,7 +59,7 @@ pub struct SpellData {
 }
 
 fn main() {
-    println!("=== msg_interned_id Game Example ===\n");
+    println!("=== bevy_interned_id Game Example ===\n");
 
     // Demonstrate basic ID creation and comparison
     demo_basic_ids();
@@ -88,8 +88,8 @@ fn demo_basic_ids() {
     let fireball2 = SpellId::new("fireball");
 
     // IDs can be displayed
-    println!("Created spell: {}", fireball);
-    println!("Created spell: {}", ice_bolt);
+    println!("Created spell: {fireball}");
+    println!("Created spell: {ice_bolt}");
 
     // Same string values produce equal IDs (pointer equality)
     assert_eq!(fireball, fireball2);
@@ -178,8 +178,7 @@ fn demo_pattern_matching() {
     };
 
     println!(
-        "Spell '{}' has damage multiplier: {}",
-        spell_id, damage_multiplier
+        "Spell '{spell_id}' has damage multiplier: {damage_multiplier}"
     );
 
     // Also works in if-let patterns
@@ -197,12 +196,12 @@ fn demo_serialization() {
 
     // Serialize to JSON
     let json = serde_json::to_string(&spell_id).expect("Failed to serialize");
-    println!("Serialized: {}", json);
+    println!("Serialized: {json}");
 
     // Deserialize from JSON
     let deserialized: SpellId =
         serde_json::from_str(&json).expect("Failed to deserialize");
-    println!("Deserialized: {}", deserialized);
+    println!("Deserialized: {deserialized}");
 
     // Verify roundtrip
     assert_eq!(spell_id, deserialized);
@@ -215,7 +214,7 @@ fn demo_serialization() {
         SpellId::new("spell_c"),
     ];
     let json_array = serde_json::to_string(&spell_ids).expect("Failed to serialize array");
-    println!("Serialized array: {}", json_array);
+    println!("Serialized array: {json_array}");
 
     println!();
 }
@@ -262,11 +261,11 @@ fn demo_ecs_integration() {
 
     // Get a specific entity's ID
     if let Some(id) = world.get::<EnemyId>(goblin_entity) {
-        println!("\nGoblin entity has ID: {}", id);
+        println!("\nGoblin entity has ID: {id}");
     }
 
     if let Some(id) = world.get::<EnemyId>(dragon_entity) {
-        println!("Dragon entity has ID: {}", id);
+        println!("Dragon entity has ID: {id}");
     }
 
     // Spawn some items
@@ -277,7 +276,7 @@ fn demo_ecs_integration() {
     let mut item_query = world.query::<&ItemId>();
     println!("\nSpawned items:");
     for item_id in item_query.iter(&world) {
-        println!("  - {}", item_id);
+        println!("  - {item_id}");
     }
 
     println!();

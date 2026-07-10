@@ -1,11 +1,11 @@
 [package]
-name = "msg_interned_id"
+name = "bevy_interned_id"
 version = "0.4.0"
 edition = "2024"
 authors = ["ffmulks <63452434+ffmulks@users.noreply.github.com>"]
-description = "Derive macro for generating interned string ID types with optional Bevy and serde integration"
+description = "Derive macro for generating interned string ID types for Bevy, with serde and reflection integration"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/MolecularSadism/msg_interned_id"
+repository = "https://github.com/MolecularSadism/bevy_interned_id"
 readme = "README.md"
 keywords = ["bevy", "ecs", "string", "interning", "id"]
 categories = ["game-development", "data-structures"]
