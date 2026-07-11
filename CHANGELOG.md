@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`interned_id!` declarative macro** — the recommended one-liner for declaring
+  an ID type: `interned_id!(pub SpellId);` writes the newtype, the
+  `Interned<str>` field, and all six required derives for you, then applies
+  `#[derive(InternedId)]`. Attributes placed before the visibility are forwarded
+  to the generated struct, e.g. `interned_id!(#[derive(Component)] pub ItemId);`.
+  Additive and fully interchangeable with the existing derive — no existing code
+  changes.
+
+### Changed
+
+- Reframed the README to credit Bevy's `Interned<str>` for the interning
+  performance (pointer comparison, hashing, deduplication) and to position this
+  crate's contribution as type safety, the reflection/serde boilerplate, and the
+  `interned_id!` ergonomics. No behavior changes.
+
 ## [0.4.0] - 2026-07-10
 
 Renamed the crate to **`bevy_interned_id`** and bumped compatibility from Bevy
