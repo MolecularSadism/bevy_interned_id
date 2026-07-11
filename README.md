@@ -5,15 +5,28 @@
 [![Bevy](https://img.shields.io/badge/Bevy-0.19-blue.svg)](https://bevyengine.org/)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 
-Derive macro for generating interned string ID types with full Bevy integration.
+Ergonomic, type-safe ID types built on Bevy's string interning, with reflection
+and serde generated for you.
 
-## Features
+## What this crate adds
 
-- **Zero-cost abstraction**: String comparisons become pointer comparisons
-- **Type safety**: Prevents mixing different ID types (e.g., `SpellId` vs `ItemId`)
-- **Full Bevy integration**: Reflection, serialization, and ECS component support
-- **Developer-friendly**: Inspector UI support in development builds
-- **Efficient memory**: Identical strings are deduplicated and share memory
+Bevy already ships string interning: `bevy::ecs::intern::Interned<str>` gives you
+`Copy` IDs with O(1) pointer comparison, pointer hashing, and automatic
+deduplication. **Those performance properties come from Bevy, not from this
+crate.** What `bevy_interned_id` adds is the per-ID-type boilerplate you'd
+otherwise hand-write on top of that primitive:
+
+- **A one-liner declaration**: `interned_id!(pub SpellId);` — no newtype, no
+  manual derive list, no spelling out `Interned<str>`.
+- **Type safety**: distinct types (`SpellId` vs `ItemId`) that can't be mixed up,
+  each with its own interner.
+- **Full Bevy reflection**: the complete
+  `Reflect`/`PartialReflect`/`Typed`/`TypePath`/`FromReflect`/`GetTypeRegistration`
+  hierarchy — the part you *can't* `#[derive(Reflect)]` on an interned pointer and
+  would otherwise write (and maintain across Bevy versions) by hand.
+- **serde**: `Serialize`/`Deserialize` as a plain string.
+- **Ergonomics**: `new`, `as_str`, `Display`, `Deref<Target = str>`, `From`, `Default`.
+- **Inspector UI**: read-only display in bevy-inspector-egui (with the `dev` feature).
 
 ## What is String Interning?
 
@@ -36,18 +49,17 @@ bevy = "0.19"
 ## Quick Start
 
 ```rust
-use bevy_interned_id::InternedId;
+use bevy_interned_id::interned_id;
 use bevy::prelude::*;
 
-// Define your ID type
-#[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct SpellId(bevy::ecs::intern::Interned<str>);
+// Define your ID type — one line, no boilerplate.
+interned_id!(pub SpellId);
 
 // Use it
 let fireball = SpellId::new("fireball");
 let ice_bolt = SpellId::new("ice_bolt");
 
-// Fast comparison (pointer equality)
+// Fast comparison (pointer equality, courtesy of Bevy's interner)
 assert_eq!(fireball, SpellId::new("fireball"));
 assert_ne!(fireball, ice_bolt);
 
@@ -56,16 +68,28 @@ println!("Casting: {}", fireball); // Prints: "Casting: fireball"
 assert_eq!(fireball.as_str(), "fireball");
 ```
 
-## Usage Examples
-
-### As ECS Component
+`interned_id!(pub SpellId)` simply expands to the lower-level derive form below,
+which you can still write by hand when you need a different struct shape:
 
 ```rust
 use bevy_interned_id::InternedId;
 use bevy::prelude::*;
 
-#[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct ItemId(bevy::ecs::intern::Interned<str>);
+#[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct SpellId(bevy::ecs::intern::Interned<str>);
+```
+
+## Usage Examples
+
+### As ECS Component
+
+```rust
+use bevy_interned_id::interned_id;
+use bevy::prelude::*;
+
+// Attributes placed before the visibility are forwarded to the generated
+// struct, so `#[derive(Component)]` makes the ID a first-class component.
+interned_id!(#[derive(Component)] pub ItemId);
 
 fn spawn_item(mut commands: Commands) {
     commands.spawn((
@@ -155,7 +179,8 @@ fn calculate_damage(damage_type: DamageType, base_damage: f32) -> f32 {
 
 ## Generated API
 
-For a type `#[derive(InternedId)] pub struct MyId(...)`:
+Whether you declare the type with `interned_id!(pub MyId);` or with
+`#[derive(InternedId)]` directly, you get:
 
 ### Methods
 - `MyId::new(s: &str) -> Self` - Create ID from string (interns automatically)
@@ -169,8 +194,14 @@ For a type `#[derive(InternedId)] pub struct MyId(...)`:
 - `Serialize`, `Deserialize` - Serde support (as string)
 - Full Bevy reflection hierarchy
 
-### Derive Requirements
-You must manually derive: `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `Debug`
+### Declaring the type
+- **Recommended**: `interned_id!(pub MyId);` writes the newtype, the
+  `Interned<str>` field, and all six required derives for you. Pass extra
+  attributes before the visibility to forward them, e.g.
+  `interned_id!(#[derive(Component)] pub MyId);`.
+- **Manual**: with `#[derive(InternedId)]` directly you must also add
+  `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `Debug` yourself, and wrap
+  `bevy::ecs::intern::Interned<str>` explicitly.
 
 ## Use Cases
 
@@ -215,7 +246,10 @@ The generated types work seamlessly with Bevy's systems:
 | `InternedId` | O(1) | Low | High |
 | `enum` | O(1) | Lowest | Highest (but inflexible) |
 
-Choose `InternedId` when you need the flexibility of strings with the performance of enums.
+The `InternedId` row's O(1) comparison and low memory are inherited from Bevy's
+`Interned<str>`; this crate layers type safety, reflection, serde, and the
+`interned_id!` ergonomics on top. Choose it when you need the flexibility of
+strings with the performance of enums.
 
 ## Bevy Version Compatibility
 
@@ -225,6 +259,13 @@ Choose `InternedId` when you need the flexibility of strings with the performanc
 | 0.3               | 0.18 |
 | 0.2               | 0.17 |
 | 0.1               | 0.16 |
+
+### New: the `interned_id!` macro
+
+The `interned_id!` declarative macro is **additive** — it is the recommended way
+to declare an ID type, but existing `#[derive(InternedId)]` code is unchanged and
+keeps working exactly as before. `interned_id!(pub Foo);` expands to the derive
+form, so the two are fully interchangeable.
 
 ### Migration from 0.3 to 0.4
 

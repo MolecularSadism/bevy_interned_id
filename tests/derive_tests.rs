@@ -23,7 +23,7 @@ use bevy::reflect::{
 };
 use bevy_ecs::world::World;
 use bevy_reflect::TypeRegistry;
-use bevy_interned_id::InternedId;
+use bevy_interned_id::{InternedId, interned_id};
 use std::collections::{HashMap, HashSet};
 
 /// Test ID type for basic functionality.
@@ -37,6 +37,12 @@ pub struct OtherId(bevy::ecs::intern::Interned<str>);
 /// ID type with Component derive for ECS integration tests.
 #[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct ComponentId(bevy::ecs::intern::Interned<str>);
+
+// Equivalent ID types declared through the `interned_id!` one-liner macro,
+// exercised in the `macro_form` module below.
+interned_id!(pub MacroId);
+interned_id!(MacroPrivateId);
+interned_id!(#[derive(Component)] pub MacroComponentId);
 
 mod core_functionality {
     use super::*;
@@ -447,6 +453,60 @@ mod ecs_integration {
         assert!(ids.contains(&"first"));
         assert!(ids.contains(&"second"));
         assert!(ids.contains(&"third"));
+    }
+}
+
+mod macro_form {
+    use super::*;
+
+    #[test]
+    fn test_macro_new_and_as_str() {
+        let id = MacroId::new("fireball");
+        assert_eq!(id.as_str(), "fireball");
+    }
+
+    #[test]
+    fn test_macro_deduplicates_with_pointer_identity() {
+        let a = MacroId::new("shared_value");
+        let b = MacroId::new("shared_value");
+        assert_eq!(a, b);
+        assert!(std::ptr::eq(a.as_str(), b.as_str()));
+    }
+
+    #[test]
+    fn test_macro_private_visibility_works() {
+        let id = MacroPrivateId::new("private_ok");
+        assert_eq!(id.as_str(), "private_ok");
+    }
+
+    #[test]
+    fn test_macro_separate_interners_per_type() {
+        // Each macro-declared type gets its own interner, just like the derive.
+        let a = MacroId::new("shared_name");
+        let b = MacroPrivateId::new("shared_name");
+        assert_eq!(a.as_str(), b.as_str());
+    }
+
+    #[test]
+    fn test_macro_component_passthrough_in_ecs() {
+        // The `#[derive(Component)]` passthrough makes the type a real component.
+        let mut world = World::new();
+        let entity = world.spawn(MacroComponentId::new("health_potion")).id();
+        let stored = world.get::<MacroComponentId>(entity).unwrap();
+        assert_eq!(stored.as_str(), "health_potion");
+    }
+
+    #[test]
+    fn test_macro_behaves_like_derive_form() {
+        // The macro is sugar over the derive: Display and serde come through
+        // unchanged, identical to a hand-written `#[derive(InternedId, ...)]`.
+        let id = MacroId::new("identical");
+        assert_eq!(format!("{id}"), "identical");
+
+        let json = serde_json::to_string(&id).unwrap();
+        assert_eq!(json, "\"identical\"");
+        let back: MacroId = serde_json::from_str(&json).unwrap();
+        assert_eq!(id, back);
     }
 }
 

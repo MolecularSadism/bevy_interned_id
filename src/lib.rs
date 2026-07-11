@@ -3,7 +3,8 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
-use syn::{DeriveInput, Ident, parse_macro_input};
+use syn::parse::{Parse, ParseStream};
+use syn::{Attribute, DeriveInput, Ident, Token, Visibility, parse_macro_input};
 
 /// Generate the interner and basic methods for an ID type.
 fn generate_core_impl(name: &Ident, interner_name: &Ident) -> TokenStream2 {
@@ -398,6 +399,91 @@ pub fn derive_interned_id(input: TokenStream) -> TokenStream {
         #reflect
         #reflection_meta
         #inspector
+    };
+
+    TokenStream::from(expanded)
+}
+
+/// Parsed form of an `interned_id!` invocation: optional passthrough attributes,
+/// an optional visibility, and the type name.
+struct InternedIdDef {
+    attrs: Vec<Attribute>,
+    vis: Visibility,
+    name: Ident,
+}
+
+impl Parse for InternedIdDef {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let attrs = input.call(Attribute::parse_outer)?;
+        let vis: Visibility = input.parse()?;
+        let name: Ident = input.parse()?;
+        // Tolerate a trailing semicolon inside the invocation, e.g.
+        // `interned_id! { pub Foo; }`.
+        if input.peek(Token![;]) {
+            input.parse::<Token![;]>()?;
+        }
+        Ok(Self { attrs, vis, name })
+    }
+}
+
+/// Declare an interned string ID type in one line.
+///
+/// This is the recommended entry point: it writes the newtype, the
+/// `Interned<str>` field, and the six required derives for you, then applies
+/// [`macro@InternedId`] to generate the rest. You never have to spell out
+/// `bevy::ecs::intern::Interned<str>` or remember the derive list.
+///
+/// # Forms
+///
+/// ```rust
+/// use bevy_interned_id::interned_id;
+/// use bevy::prelude::*;
+///
+/// interned_id!(pub SpellId);            // public ID type
+/// interned_id!(EnemyId);                // private (module-local) ID type
+/// interned_id!(#[derive(Component)] pub ItemId);  // extra derives passed through
+///
+/// let fireball = SpellId::new("fireball");
+/// assert_eq!(fireball.as_str(), "fireball");
+/// ```
+///
+/// The invocation above expands to exactly the hand-written form:
+///
+/// ```rust
+/// # use bevy::prelude::*;
+/// #[derive(bevy_interned_id::InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+/// pub struct SpellId(bevy::ecs::intern::Interned<str>);
+/// ```
+///
+/// Any attributes you place before the visibility (such as
+/// `#[derive(Component)]`) are forwarded to the generated struct, so the type
+/// drops straight into the ECS:
+///
+/// ```rust
+/// use bevy_interned_id::interned_id;
+/// use bevy::prelude::*;
+///
+/// interned_id!(#[derive(Component)] pub ItemId);
+///
+/// fn spawn_item(mut commands: Commands) {
+///     commands.spawn(ItemId::new("health_potion"));
+/// }
+/// bevy::ecs::system::assert_is_system(spawn_item);
+/// ```
+///
+/// Reach for the [`macro@InternedId`] derive directly only when you need a
+/// struct shape this macro doesn't produce.
+#[proc_macro]
+pub fn interned_id(input: TokenStream) -> TokenStream {
+    let InternedIdDef { attrs, vis, name } = parse_macro_input!(input as InternedIdDef);
+
+    let expanded = quote! {
+        #(#attrs)*
+        #[derive(
+            ::bevy_interned_id::InternedId,
+            Clone, Copy, PartialEq, Eq, Hash, Debug
+        )]
+        #vis struct #name(bevy::ecs::intern::Interned<str>);
     };
 
     TokenStream::from(expanded)

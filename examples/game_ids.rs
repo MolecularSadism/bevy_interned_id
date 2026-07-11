@@ -26,22 +26,23 @@ mod bevy {
 
 use bevy::prelude::*;
 use bevy_ecs::world::World;
-use bevy_interned_id::InternedId;
+use bevy_interned_id::{InternedId, interned_id};
 use std::collections::HashMap;
 
-// Define various ID types for a game
+// Define various ID types for a game.
 
+// The `interned_id!` one-liner is the recommended way to declare an ID type:
+// it writes the newtype, the `Interned<str>` field, and the required derives
+// for you. Attributes before the visibility (like `#[derive(Component)]`) are
+// forwarded to the generated struct.
+interned_id!(#[derive(Component)] pub ItemId); // items in the player's inventory
+interned_id!(#[derive(Component)] pub EnemyId); // enemy types
+
+// For contrast, `SpellId` is written with the lower-level `#[derive(InternedId)]`
+// directly — the exact form the macro above expands to.
 /// Unique identifier for spells in the game.
 #[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct SpellId(bevy::ecs::intern::Interned<str>);
-
-/// Unique identifier for items in the player's inventory.
-#[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct ItemId(bevy::ecs::intern::Interned<str>);
-
-/// Unique identifier for enemy types.
-#[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct EnemyId(bevy::ecs::intern::Interned<str>);
 
 /// Component marking an entity's health.
 #[derive(Component)]
