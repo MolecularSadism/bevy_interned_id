@@ -13,9 +13,7 @@ concurrency:
 jobs:
   ci:
     # Reusable CI workflow from the msg_ci_templates repository (Bevy 0.19 variant).
-    # NOTE: pinned to the branch that introduces the 0.19 variant; switch to
-    # `@main` once that change is merged.
-    uses: MolecularSadism/msg_ci_templates/.github/workflows/bevy-0.19-ci.yaml@claude/ci-pipeline-template-link-dgt0ee
+    uses: MolecularSadism/msg_ci_templates/.github/workflows/bevy-0.19-ci.yaml@main
     with:
       # Build/test on stable Rust. Bevy 0.19 and this crate's `dev` feature
       # (inspector-egui integration) both compile on stable.
