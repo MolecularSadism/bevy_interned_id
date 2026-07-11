@@ -20,7 +20,6 @@ jobs:
       # Build/test on stable Rust. Bevy 0.19 and this crate's `dev` feature
       # (inspector-egui integration) both compile on stable.
       rust-toolchain: stable
-      # bevy-lint requires a nightly that can compile Bevy 0.19; no released
-      # bevy_lint currently can, so it stays disabled (this is also the 0.19
-      # variant's default).
-      bevy-lint-enabled: false
+      # Run bevy_lint. The 0.19 variant pins a bevy_lint revision (and its
+      # nightly) that is new enough to compile Bevy 0.19.
+      bevy-lint-enabled: true
