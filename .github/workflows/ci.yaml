@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    # Reusable CI workflow from the msg_ci_templates repository (Bevy 0.19 variant).
+    uses: MolecularSadism/msg_ci_templates/.github/workflows/bevy-0.19-ci.yaml@main
+    with:
+      # Build/test on stable Rust. Bevy 0.19 and this crate's `dev` feature
+      # (inspector-egui integration) both compile on stable.
+      rust-toolchain: stable
+      # Run bevy_lint. The 0.19 variant pins a bevy_lint revision (and its
+      # nightly) that is new enough to compile Bevy 0.19.
+      bevy-lint-enabled: true

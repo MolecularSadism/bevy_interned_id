@@ -22,8 +22,8 @@ use bevy::reflect::{
     FromReflect, GetTypeRegistration, PartialReflect, Reflect, ReflectKind, TypePath, Typed,
 };
 use bevy_ecs::world::World;
-use bevy_reflect::TypeRegistry;
 use bevy_interned_id::{InternedId, interned_id};
+use bevy_reflect::TypeRegistry;
 use std::collections::{HashMap, HashSet};
 
 /// Test ID type for basic functionality.
@@ -399,8 +399,16 @@ mod type_registration {
         let registration = TestId::get_type_registration();
 
         // Should have type data registered
-        assert!(registration.data::<bevy_reflect::ReflectFromReflect>().is_some());
-        assert!(registration.data::<bevy_reflect::ReflectFromPtr>().is_some());
+        assert!(
+            registration
+                .data::<bevy_reflect::ReflectFromReflect>()
+                .is_some()
+        );
+        assert!(
+            registration
+                .data::<bevy_reflect::ReflectFromPtr>()
+                .is_some()
+        );
         assert!(registration.data::<ReflectDefault>().is_some());
     }
 
