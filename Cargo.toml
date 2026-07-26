@@ -1,7 +1,10 @@
 [package]
 name = "bevy_interned_id"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
+# MSRV of this proc-macro crate itself (edition 2024). The Bevy version your
+# application pairs it with dictates the compiler your build actually needs.
+rust-version = "1.85"
 authors = ["ffmulks <63452434+ffmulks@users.noreply.github.com>"]
 description = "Derive macro for generating interned string ID types for Bevy, with serde and reflection integration"
 license = "MIT OR Apache-2.0"
@@ -11,6 +14,12 @@ keywords = ["bevy", "ecs", "string", "interning", "id"]
 categories = ["game-development", "data-structures"]
 
 [features]
+default = ["serde"]
+# Emit serde `Serialize`/`Deserialize` impls. Requires `serde` as a direct
+# dependency of the consuming crate.
+serde = []
+# Emit a read-only bevy-inspector-egui `InspectorPrimitive` impl. Requires
+# `bevy-inspector-egui` as a direct dependency of the consuming crate.
 dev = []
 
 [lib]
@@ -38,3 +47,9 @@ bevy = { version = "0.19", default-features = false }
 # is a dev-dependency here purely so `--all-features` builds/tests locally and
 # in CI.
 bevy-inspector-egui = { version = "0.37", default-features = false }
+# Benchmarks backing the README's performance claims.
+criterion = "0.5"
+
+[[bench]]
+name = "id_performance"
+harness = false

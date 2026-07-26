@@ -33,8 +33,8 @@ fn generate_core_impl(name: &Ident, interner_name: &Ident) -> TokenStream2 {
 /// Generate standard trait implementations (Display, From, Deref, Default).
 fn generate_standard_traits(name: &Ident) -> TokenStream2 {
     quote! {
-        impl std::fmt::Display for #name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        impl ::std::fmt::Display for #name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, "{}", self.as_str())
             }
         }
@@ -51,7 +51,7 @@ fn generate_standard_traits(name: &Ident) -> TokenStream2 {
             }
         }
 
-        impl std::ops::Deref for #name {
+        impl ::std::ops::Deref for #name {
             type Target = str;
 
             fn deref(&self) -> &Self::Target {
@@ -68,6 +68,7 @@ fn generate_standard_traits(name: &Ident) -> TokenStream2 {
 }
 
 /// Generate serde serialization implementations.
+#[cfg(feature = "serde")]
 fn generate_serde_impls(name: &Ident) -> TokenStream2 {
     quote! {
         impl serde::Serialize for #name {
@@ -142,7 +143,9 @@ fn generate_partial_reflect_impl(name: &Ident, name_str: &str) -> TokenStream2 {
                 } else {
                     Err(bevy::reflect::ApplyError::MismatchedTypes {
                         from_type: value.reflect_type_path().to_string().into_boxed_str(),
-                        to_type: Self::type_path().to_string().into_boxed_str(),
+                        to_type: <Self as bevy::reflect::TypePath>::type_path()
+                            .to_string()
+                            .into_boxed_str(),
                     })
                 }
             }
@@ -164,8 +167,8 @@ fn generate_partial_reflect_impl(name: &Ident, name_str: &str) -> TokenStream2 {
             }
 
             fn reflect_hash(&self) -> Option<u64> {
-                use std::hash::{Hash, Hasher};
-                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                use ::std::hash::{Hash, Hasher};
+                let mut hasher = ::std::collections::hash_map::DefaultHasher::new();
                 self.hash(&mut hasher);
                 Some(hasher.finish())
             }
@@ -177,7 +180,7 @@ fn generate_partial_reflect_impl(name: &Ident, name_str: &str) -> TokenStream2 {
                 value.try_downcast_ref::<Self>().map(|other| self == other)
             }
 
-            fn debug(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, "{}(\"{}\")", #name_str, self.as_str())
             }
 
@@ -192,15 +195,15 @@ fn generate_partial_reflect_impl(name: &Ident, name_str: &str) -> TokenStream2 {
 fn generate_reflect_impl(name: &Ident) -> TokenStream2 {
     quote! {
         impl bevy::reflect::Reflect for #name {
-            fn into_any(self: Box<Self>) -> Box<dyn std::any::Any> {
+            fn into_any(self: Box<Self>) -> Box<dyn ::std::any::Any> {
                 self
             }
 
-            fn as_any(&self) -> &dyn std::any::Any {
+            fn as_any(&self) -> &dyn ::std::any::Any {
                 self
             }
 
-            fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+            fn as_any_mut(&mut self) -> &mut dyn ::std::any::Any {
                 self
             }
 
@@ -282,7 +285,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
             fn ui(
                 &mut self,
                 ui: &mut bevy_inspector_egui::egui::Ui,
-                _options: &dyn std::any::Any,
+                _options: &dyn ::std::any::Any,
                 _id: bevy_inspector_egui::egui::Id,
                 _env: bevy_inspector_egui::reflect_inspector::InspectorUi<'_, '_>,
             ) -> bool {
@@ -293,7 +296,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
             fn ui_readonly(
                 &self,
                 ui: &mut bevy_inspector_egui::egui::Ui,
-                _options: &dyn std::any::Any,
+                _options: &dyn ::std::any::Any,
                 _id: bevy_inspector_egui::egui::Id,
                 _env: bevy_inspector_egui::reflect_inspector::InspectorUi<'_, '_>,
             ) {
@@ -316,12 +319,13 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 /// # Generated Code
 ///
 /// The macro generates:
-/// 1. A static interner unique to this type
+/// 1. A static interner unique to this type, hidden inside an anonymous
+///    `const` block so it never appears in your module's namespace
 /// 2. Core methods: `new()` and `as_str()`
 /// 3. Standard traits: Display, From, Deref, Default
-/// 4. Serialization: Serialize, Deserialize
+/// 4. Serialization: Serialize, Deserialize (`serde` feature, on by default)
 /// 5. Bevy reflection: Full reflection hierarchy
-/// 6. Inspector UI (dev feature only)
+/// 6. Inspector UI (`dev` feature only)
 ///
 /// # Examples
 ///
@@ -382,7 +386,10 @@ pub fn derive_interned_id(input: TokenStream) -> TokenStream {
     // Generate each section using helper functions
     let core = generate_core_impl(name, &interner_name);
     let standard_traits = generate_standard_traits(name);
+    #[cfg(feature = "serde")]
     let serde = generate_serde_impls(name);
+    #[cfg(not(feature = "serde"))]
+    let serde = quote! {};
     let partial_reflect = generate_partial_reflect_impl(name, &name_str);
     let reflect = generate_reflect_impl(name);
     let reflection_meta = generate_reflection_meta_impls(name, &name_str);
@@ -391,14 +398,19 @@ pub fn derive_interned_id(input: TokenStream) -> TokenStream {
     #[cfg(not(feature = "dev"))]
     let inspector = quote! {};
 
+    // Everything is emitted inside an anonymous `const` block: the trait impls
+    // and inherent methods are visible globally as usual, but the interner
+    // static stays out of the caller's module namespace.
     let expanded = quote! {
-        #core
-        #standard_traits
-        #serde
-        #partial_reflect
-        #reflect
-        #reflection_meta
-        #inspector
+        const _: () = {
+            #core
+            #standard_traits
+            #serde
+            #partial_reflect
+            #reflect
+            #reflection_meta
+            #inspector
+        };
     };
 
     TokenStream::from(expanded)

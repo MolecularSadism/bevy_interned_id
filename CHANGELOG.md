@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.0] - 2026-07-26
 
 ### Added
 
@@ -16,13 +16,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to the generated struct, e.g. `interned_id!(#[derive(Component)] pub ItemId);`.
   Additive and fully interchangeable with the existing derive — no existing code
   changes.
+- **`serde` cargo feature** (enabled by default) gating the generated
+  `Serialize`/`Deserialize` impls. Consumers that do not use serde can now opt
+  out with `default-features = false` and drop the requirement of having
+  `serde` as a direct dependency.
+- **Criterion benchmark suite** (`cargo bench --bench id_performance`) backing
+  the README's performance claims: equality, hashing, and `HashMap` lookup of
+  interned IDs versus `String`.
+- `rust-version = "1.85"` metadata: the proc-macro crate itself builds on any
+  edition-2024 toolchain; the compiler your application needs is dictated by
+  its Bevy version.
 
 ### Changed
 
+- **Generated code hygiene**: everything the derive emits — including the
+  per-type interner static — now lives inside an anonymous `const` block, so
+  the `<TYPENAME>_INTERNER` static no longer leaks into the declaring module's
+  namespace. The impls and methods remain visible as before. Code that
+  referenced the undocumented static directly must use `new`/`as_str` instead.
+- Generated code uses fully-qualified `::std` paths, so ID types can be
+  declared in modules that shadow names like `fmt` or `ops`.
+- The generated `try_apply` calls `<Self as TypePath>::type_path()` with a
+  fully-qualified trait path, so declaring an ID type no longer requires
+  `TypePath` (usually via `bevy::prelude::*`) to be in scope at the declaration
+  site.
 - Reframed the README to credit Bevy's `Interned<str>` for the interning
   performance (pointer comparison, hashing, deduplication) and to position this
   crate's contribution as type safety, the reflection/serde boilerplate, and the
-  `interned_id!` ergonomics. No behavior changes.
+  `interned_id!` ergonomics; documented the facade-module pattern for
+  `bevy_ecs`/`bevy_reflect`-only consumers, the direct-dependency requirements,
+  and the feature flags.
 
 ## [0.4.0] - 2026-07-10
 
@@ -117,6 +140,7 @@ Initial release, compatible with **Bevy 0.16**.
   `Default`, serde `Serialize` / `Deserialize`, the full Bevy reflection
   hierarchy, and optional `bevy-inspector-egui` support.
 
+[0.5.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.1.0...v0.2.0
