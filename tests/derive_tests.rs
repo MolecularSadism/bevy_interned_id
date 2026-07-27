@@ -191,6 +191,7 @@ mod collections {
     }
 }
 
+#[cfg(feature = "serde")]
 mod serde_integration {
     use super::*;
     use serde::{Deserialize, Serialize};
@@ -506,11 +507,16 @@ mod macro_form {
 
     #[test]
     fn test_macro_behaves_like_derive_form() {
-        // The macro is sugar over the derive: Display and serde come through
-        // unchanged, identical to a hand-written `#[derive(InternedId, ...)]`.
+        // The macro is sugar over the derive: Display comes through unchanged,
+        // identical to a hand-written `#[derive(InternedId, ...)]`.
         let id = MacroId::new("identical");
         assert_eq!(format!("{id}"), "identical");
+    }
 
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_macro_serde_round_trip() {
+        let id = MacroId::new("identical");
         let json = serde_json::to_string(&id).unwrap();
         assert_eq!(json, "\"identical\"");
         let back: MacroId = serde_json::from_str(&json).unwrap();

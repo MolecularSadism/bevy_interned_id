@@ -191,6 +191,12 @@ fn demo_pattern_matching() {
     println!();
 }
 
+#[cfg(not(feature = "serde"))]
+fn demo_serialization() {
+    println!("--- Serialization (skipped: `serde` feature disabled) ---\n");
+}
+
+#[cfg(feature = "serde")]
 fn demo_serialization() {
     println!("--- Serialization ---");
 

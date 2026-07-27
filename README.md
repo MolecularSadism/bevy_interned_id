@@ -1,6 +1,8 @@
 # `bevy_interned_id`
 
 [![CI](https://github.com/MolecularSadism/bevy_interned_id/workflows/CI/badge.svg)](https://github.com/MolecularSadism/bevy_interned_id/actions)
+[![Crates.io](https://img.shields.io/crates/v/bevy_interned_id.svg)](https://crates.io/crates/bevy_interned_id)
+[![Docs.rs](https://docs.rs/bevy_interned_id/badge.svg)](https://docs.rs/bevy_interned_id)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://github.com/MolecularSadism/bevy_interned_id#license)
 [![Bevy](https://img.shields.io/badge/Bevy-0.19-blue.svg)](https://bevyengine.org/)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
@@ -42,9 +44,24 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_interned_id = "0.4"
+bevy_interned_id = "0.5"
 bevy = "0.19"
+serde = "1" # needed by the default `serde` feature
 ```
+
+`bevy_interned_id` is a pure proc-macro crate: it adds **no** Bevy or serde
+dependency to your tree. The generated code resolves `bevy::…` (and, with the
+`serde` feature, `serde::…`) paths at the expansion site, so those crates must
+be direct dependencies of the crate that declares the ID types. If you depend
+on `bevy_ecs`/`bevy_reflect` instead of the full `bevy` facade, see
+[Using without the full `bevy` facade](#using-without-the-full-bevy-facade).
+
+### Feature flags
+
+| Feature | Default | Effect |
+|---------|---------|--------|
+| `serde` | ✅ | Emit `Serialize`/`Deserialize` impls (serialize as a plain string). Requires `serde` in your dependencies. |
+| `dev` | ❌ | Emit a read-only `InspectorPrimitive` impl. Requires `bevy-inspector-egui` in your dependencies. |
 
 ## Quick Start
 
@@ -177,6 +194,40 @@ fn calculate_damage(damage_type: DamageType, base_damage: f32) -> f32 {
 }
 ```
 
+## Using without the full `bevy` facade
+
+Library crates often depend on `bevy_ecs`/`bevy_reflect` directly instead of
+the `bevy` facade. Because the generated code resolves `bevy::…` paths at the
+expansion site, a three-line facade module makes the macro work there too —
+this crate's own tests, example, and benchmarks use exactly this pattern:
+
+```rust
+// Facade so the generated `bevy::…` paths resolve to the sub-crates.
+mod bevy {
+    pub mod ecs {
+        pub mod intern {
+            pub use bevy_ecs::intern::*;
+        }
+    }
+    pub mod reflect {
+        pub use bevy_reflect::*;
+    }
+    pub mod prelude {
+        pub use bevy_ecs::prelude::*;
+        pub use bevy_reflect::prelude::*;
+    }
+}
+
+use bevy_interned_id::interned_id;
+
+interned_id!(pub SpellId);
+
+fn main() {
+    let id = SpellId::new("fireball");
+    assert_eq!(id.as_str(), "fireball");
+}
+```
+
 ## Generated API
 
 Whether you declare the type with `interned_id!(pub MyId);` or with
@@ -191,8 +242,11 @@ Whether you declare the type with `interned_id!(pub MyId);` or with
 - `From<&str>` and `From<String>` - Convenient conversions
 - `Deref<Target = str>` - Use as string slice with deref coercion
 - `Default` - Empty string default
-- `Serialize`, `Deserialize` - Serde support (as string)
+- `Serialize`, `Deserialize` - Serde support (as string; `serde` feature, on by default)
 - Full Bevy reflection hierarchy
+
+The per-type interner static itself is emitted inside an anonymous `const`
+block, so it never appears in your module's namespace.
 
 ### Declaring the type
 - **Recommended**: `interned_id!(pub MyId);` writes the newtype, the
@@ -220,6 +274,9 @@ String interning provides significant performance benefits for ID types:
 - **Memory**: Shared storage for duplicate strings
 - **Hashing**: Hash the pointer instead of the string content
 - **Copy**: Copy a single pointer instead of string data
+
+These claims are measurable: `cargo bench --bench id_performance` compares
+interned IDs against `String` for equality, hashing, and `HashMap` lookup.
 
 ## Bevy Integration
 
@@ -255,10 +312,31 @@ strings with the performance of enums.
 
 | `bevy_interned_id` | Bevy |
 |-------------------|------|
-| 0.4               | 0.19 |
+| 0.4, 0.5          | 0.19 |
 | 0.3               | 0.18 |
 | 0.2               | 0.17 |
 | 0.1               | 0.16 |
+
+The Bevy column is the version each release is developed and tested against.
+Because this is a pure proc-macro crate — it adds no Bevy dependency of its
+own — a release keeps working with any Bevy version where the emitted paths
+and trait surfaces still exist. In particular, 0.4/0.5 output compiles
+unchanged against both Bevy 0.18 and 0.19, and the Rust toolchain you need is
+dictated by your Bevy version (the crate itself only requires Rust 1.85).
+
+### Migration from 0.4 to 0.5
+
+No changes to the generated API. Points to be aware of:
+
+- **`serde` became a default cargo feature.** Builds with default features are
+  unchanged. If you use `default-features = false`, add `features = ["serde"]`
+  back to keep the `Serialize`/`Deserialize` impls.
+- **The per-type interner static is no longer visible** in the declaring
+  module (it is emitted inside an anonymous `const` block). Code referencing
+  the undocumented `<TYPENAME>_INTERNER` static directly must switch to the
+  public `new`/`as_str` API.
+- The generated code now uses fully-qualified `::std` paths, so ID types can
+  be declared in modules that shadow names like `fmt` or `ops`.
 
 ### New: the `interned_id!` macro
 
