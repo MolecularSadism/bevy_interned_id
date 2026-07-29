@@ -4,7 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/bevy_interned_id.svg)](https://crates.io/crates/bevy_interned_id)
 [![Docs.rs](https://docs.rs/bevy_interned_id/badge.svg)](https://docs.rs/bevy_interned_id)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://github.com/MolecularSadism/bevy_interned_id#license)
-[![Bevy](https://img.shields.io/badge/Bevy-0.19-blue.svg)](https://bevyengine.org/)
+[![Bevy](https://img.shields.io/badge/Bevy-0.18%E2%80%930.19-blue.svg)](https://bevyengine.org/)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 
 Ergonomic, type-safe ID types built on Bevy's string interning, with reflection
@@ -45,8 +45,8 @@ Add this to your `Cargo.toml`:
 ```toml
 [dependencies]
 bevy_interned_id = "0.5"
-bevy = "0.19"
-serde = "1" # needed by the default `serde` feature
+bevy = "0.19" # 0.18 works too — see Bevy Version Compatibility
+serde = "1"   # needed by the default `serde` feature
 ```
 
 `bevy_interned_id` is a pure proc-macro crate: it adds **no** Bevy or serde
@@ -310,19 +310,20 @@ strings with the performance of enums.
 
 ## Bevy Version Compatibility
 
-| `bevy_interned_id` | Bevy |
-|-------------------|------|
-| 0.4, 0.5          | 0.19 |
-| 0.3               | 0.18 |
-| 0.2               | 0.17 |
-| 0.1               | 0.16 |
+| `bevy_interned_id` | Bevy        |
+|-------------------|-------------|
+| 0.4, 0.5          | 0.18 – 0.19 |
+| 0.3               | 0.18        |
+| 0.2               | 0.17        |
+| 0.1               | 0.16        |
 
-The Bevy column is the version each release is developed and tested against.
-Because this is a pure proc-macro crate — it adds no Bevy dependency of its
-own — a release keeps working with any Bevy version where the emitted paths
-and trait surfaces still exist. In particular, 0.4/0.5 output compiles
-unchanged against both Bevy 0.18 and 0.19, and the Rust toolchain you need is
-dictated by your Bevy version (the crate itself only requires Rust 1.85).
+The Bevy column lists the versions each release is verified against — for
+0.4/0.5 that is Bevy 0.19 in this crate's test suite and CI, and Bevy 0.18 in
+a production game consuming the crate. Because this is a pure proc-macro
+crate — it adds no Bevy dependency of its own — a release keeps working with
+any Bevy version where the emitted paths and trait surfaces still exist. The
+Rust toolchain you need is dictated by your Bevy version (the crate itself
+only requires Rust 1.85).
 
 ### Migration from 0.4 to 0.5
 
