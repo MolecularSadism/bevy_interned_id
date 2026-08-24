@@ -60,8 +60,8 @@ on `bevy_ecs`/`bevy_reflect` instead of the full `bevy` facade, see
 
 | Feature | Default | Effect |
 |---------|---------|--------|
-| `serde` | ✅ | Emit `Serialize`/`Deserialize` impls (serialize as a plain string). Requires `serde` in your dependencies. |
-| `dev` | ❌ | Emit a read-only `InspectorPrimitive` impl. Requires `bevy-inspector-egui` in your dependencies. |
+| `serde` | ✅ | Emit `Serialize`/`Deserialize` impls (serialize as a plain string). |
+| `dev` | ❌ | Emit a read-only `InspectorPrimitive` impl. |
 
 ## Quick Start
 
