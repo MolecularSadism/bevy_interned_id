@@ -352,16 +352,9 @@ Bevy 0.19. Key points:
 - **No breaking changes** to the public API of generated types. The `new`,
   `as_str`, `Display`, `From`, `Deref`, `Default`, serde, and reflection
   surfaces are unchanged.
-- **Bevy 0.19 reflection reorganization**: `bevy_reflect` moved many items into
-  kind-specific modules at the crate root. The paths the macro emits
-  (`bevy::reflect::TypeInfo`, `bevy::reflect::OpaqueInfo`,
-  `bevy::reflect::utility::NonGenericTypeInfoCell`, and the
-  `PartialReflect`/`Reflect` hierarchy) are still re-exported, so generated code
-  continues to compile without changes.
 - **Interned string requirement**: Bevy 0.19 requires the interned type to
   implement `Internable`. `str` satisfies this out of the box, so
   `Interned<str>` newtypes are unaffected.
-- **Requires Rust 1.95 or newer**, as mandated by Bevy 0.19.
 
 To migrate, update your `Cargo.toml`:
 
