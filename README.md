@@ -296,12 +296,12 @@ The generated types work seamlessly with Bevy's systems:
 
 ## Comparison with Alternatives
 
-| Approach | Comparison | Memory | Type Safety |
-|----------|------------|--------|-------------|
-| `String` | O(n) | High (duplicates) | Low |
-| `&'static str` | O(n) | Low | Low |
-| `InternedId` | O(1) | Low | High |
-| `enum` | O(1) | Lowest | Highest (but inflexible) |
+| Approach | Comparison | Memory | Type Safety | Comment |
+|----------|------------|--------|-------------|---------|
+| `String` | O(n) | High (duplicates) | Low | Each call site stores a duplicate |
+| `&'static str` | O(n) | Low | Low | |
+| `enum` | O(1) | Lowest | Highest | Changes require recompilation |
+| `InternedId` | O(1) | Low | High | Hot reloadable |
 
 The `InternedId` row's O(1) comparison and low memory are inherited from Bevy's
 `Interned<str>`; this crate layers type safety, reflection, serde, and the
@@ -312,8 +312,7 @@ strings with the performance of enums.
 
 | `bevy_interned_id` | Bevy |
 |-------------------|------|
-| 0.4, 0.5          | 0.19 |
-| 0.3               | 0.18 |
+| 0.3, 0.4, 0.5     | 0.18, 0.19 |
 | 0.2               | 0.17 |
 | 0.1               | 0.16 |
 
