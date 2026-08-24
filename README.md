@@ -317,11 +317,8 @@ strings with the performance of enums.
 | 0.1               | 0.16 |
 
 The Bevy column is the version each release is developed and tested against.
-Because this is a pure proc-macro crate — it adds no Bevy dependency of its
-own — a release keeps working with any Bevy version where the emitted paths
-and trait surfaces still exist. In particular, 0.4/0.5 output compiles
-unchanged against both Bevy 0.18 and 0.19, and the Rust toolchain you need is
-dictated by your Bevy version (the crate itself only requires Rust 1.85).
+Because this is a pure proc-macro crate, it adds no Bevy dependency of its
+own.
 
 ### Migration from 0.4 to 0.5
 
