@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-08-28
+
+Documentation-only release; no code changes.
+
+### Changed
+
+- README: the Bevy badge and install snippet now state the full supported
+  Bevy 0.18–0.19 range; refreshed the comparison table, dependency
+  explanation, and feature-flags section.
+
 ## [0.5.0] - 2026-07-26
 
 ### Added

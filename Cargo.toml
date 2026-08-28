@@ -1,6 +1,6 @@
 [package]
 name = "bevy_interned_id"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2024"
 # MSRV of this proc-macro crate itself (edition 2024). The Bevy version your
 # application pairs it with dictates the compiler your build actually needs.
