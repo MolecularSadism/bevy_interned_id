@@ -4,7 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/bevy_interned_id.svg)](https://crates.io/crates/bevy_interned_id)
 [![Docs.rs](https://docs.rs/bevy_interned_id/badge.svg)](https://docs.rs/bevy_interned_id)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://github.com/MolecularSadism/bevy_interned_id#license)
-[![Bevy](https://img.shields.io/badge/Bevy-0.19-blue.svg)](https://bevyengine.org/)
+[![Bevy](https://img.shields.io/badge/Bevy-0.18%E2%80%930.19-blue.svg)](https://bevyengine.org/)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 
 Ergonomic, type-safe ID types built on Bevy's string interning, with reflection
@@ -45,8 +45,8 @@ Add this to your `Cargo.toml`:
 ```toml
 [dependencies]
 bevy_interned_id = "0.5"
-bevy = "0.19"
-serde = "1" # needed by the default `serde` feature
+bevy = "0.19" # 0.18 works too — see Bevy Version Compatibility
+serde = "1"   # needed by the default `serde` feature
 ```
 
 `bevy_interned_id` is a pure proc-macro crate: it adds **no** Bevy or serde
