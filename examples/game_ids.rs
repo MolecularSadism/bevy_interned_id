@@ -41,7 +41,7 @@ interned_id!(#[derive(Component)] pub EnemyId); // enemy types
 // For contrast, `SpellId` is written with the lower-level `#[derive(InternedId)]`
 // directly — the exact form the macro above expands to.
 /// Unique identifier for spells in the game.
-#[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(InternedId, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct SpellId(bevy::ecs::intern::Interned<str>);
 
 /// Component marking an entity's health.

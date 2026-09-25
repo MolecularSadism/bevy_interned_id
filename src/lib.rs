@@ -67,6 +67,23 @@ fn generate_standard_traits(name: &Ident) -> TokenStream2 {
     }
 }
 
+/// Generate a `Hash` implementation that hashes the string content.
+///
+/// `Interned<str>`'s own `Hash` feeds the leaked allocation's address to the
+/// hasher, which differs between processes and makes `HashMap`/`HashSet`
+/// iteration order non-deterministic even with a fixed-seed hasher. Hashing
+/// `as_str()` keeps it stable. This agrees with the pointer-based `PartialEq`:
+/// interning guarantees equal content if and only if the pointers are equal.
+fn generate_hash_impl(name: &Ident) -> TokenStream2 {
+    quote! {
+        impl ::std::hash::Hash for #name {
+            fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
+                ::std::hash::Hash::hash(self.as_str(), state);
+            }
+        }
+    }
+}
+
 /// Generate serde serialization implementations.
 #[cfg(feature = "serde")]
 fn generate_serde_impls(name: &Ident) -> TokenStream2 {
@@ -314,7 +331,9 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 ///
 /// The struct must:
 /// - Be a newtype wrapping `bevy::ecs::intern::Interned<str>`
-/// - Manually derive: `Clone`, `Copy`, `PartialEq`, `Eq`, `Hash`, `Debug`
+/// - Manually derive: `Clone`, `Copy`, `PartialEq`, `Eq`, `Debug`
+/// - **Not** derive `Hash`: the macro implements it (see below), so a
+///   `#[derive(Hash)]` alongside it is a conflicting-impl error
 ///
 /// # Generated Code
 ///
@@ -323,9 +342,11 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 ///    `const` block so it never appears in your module's namespace
 /// 2. Core methods: `new()` and `as_str()`
 /// 3. Standard traits: Display, From, Deref, Default
-/// 4. Serialization: Serialize, Deserialize (`serde` feature, on by default)
-/// 5. Bevy reflection: Full reflection hierarchy
-/// 6. Inspector UI (`dev` feature only)
+/// 4. `Hash` over the string content (not the interned pointer), so hashes and
+///    `HashMap`/`HashSet` iteration order are identical across processes
+/// 5. Serialization: Serialize, Deserialize (`serde` feature, on by default)
+/// 6. Bevy reflection: Full reflection hierarchy
+/// 7. Inspector UI (`dev` feature only)
 ///
 /// # Examples
 ///
@@ -335,7 +356,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 /// use bevy_interned_id::InternedId;
 /// use bevy::prelude::*;
 ///
-/// #[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+/// #[derive(InternedId, Clone, Copy, PartialEq, Eq, Debug)]
 /// pub struct SpellId(bevy::ecs::intern::Interned<str>);
 ///
 /// let id = SpellId::new("fireball");
@@ -349,7 +370,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 /// use bevy_interned_id::InternedId;
 /// use bevy::prelude::*;
 ///
-/// #[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+/// #[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Debug)]
 /// pub struct ItemId(bevy::ecs::intern::Interned<str>);
 ///
 /// fn spawn_item(mut commands: Commands) {
@@ -366,7 +387,7 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 /// use bevy_interned_id::InternedId;
 /// use bevy::prelude::*;
 ///
-/// #[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+/// #[derive(InternedId, Clone, Copy, PartialEq, Eq, Debug)]
 /// pub struct QuestId(bevy::ecs::intern::Interned<str>);
 ///
 /// // Serializes as: "main_quest", deserializes from: "main_quest"
@@ -386,6 +407,7 @@ pub fn derive_interned_id(input: TokenStream) -> TokenStream {
     // Generate each section using helper functions
     let core = generate_core_impl(name, &interner_name);
     let standard_traits = generate_standard_traits(name);
+    let hash = generate_hash_impl(name);
     #[cfg(feature = "serde")]
     let serde = generate_serde_impls(name);
     #[cfg(not(feature = "serde"))]
@@ -405,6 +427,7 @@ pub fn derive_interned_id(input: TokenStream) -> TokenStream {
         const _: () = {
             #core
             #standard_traits
+            #hash
             #serde
             #partial_reflect
             #reflect
@@ -441,7 +464,7 @@ impl Parse for InternedIdDef {
 /// Declare an interned string ID type in one line.
 ///
 /// This is the recommended entry point: it writes the newtype, the
-/// `Interned<str>` field, and the six required derives for you, then applies
+/// `Interned<str>` field, and the five required derives for you, then applies
 /// [`macro@InternedId`] to generate the rest. You never have to spell out
 /// `bevy::ecs::intern::Interned<str>` or remember the derive list.
 ///
@@ -463,7 +486,7 @@ impl Parse for InternedIdDef {
 ///
 /// ```rust
 /// # use bevy::prelude::*;
-/// #[derive(bevy_interned_id::InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+/// #[derive(bevy_interned_id::InternedId, Clone, Copy, PartialEq, Eq, Debug)]
 /// pub struct SpellId(bevy::ecs::intern::Interned<str>);
 /// ```
 ///
@@ -493,7 +516,7 @@ pub fn interned_id(input: TokenStream) -> TokenStream {
         #(#attrs)*
         #[derive(
             ::bevy_interned_id::InternedId,
-            Clone, Copy, PartialEq, Eq, Hash, Debug
+            Clone, Copy, PartialEq, Eq, Debug
         )]
         #vis struct #name(bevy::ecs::intern::Interned<str>);
     };
