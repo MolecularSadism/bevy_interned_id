@@ -5,6 +5,31 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-09-25
+
+### Changed
+
+- **Breaking: `#[derive(InternedId)]` now implements `Hash`**, hashing the
+  string content (`as_str()`) instead of the interned pointer. Bevy's
+  `Interned<str>` hashes the leaked allocation's address, which differs between
+  processes, so `HashMap`/`HashSet` iteration order over IDs changed from run to
+  run even with a fixed-seed hasher. Hashes and iteration order are now
+  deterministic. Equality is still an O(1) pointer comparison; interning
+  guarantees equal content if and only if the pointers are equal. Hashing is
+  now O(n) in the string length.
+- `interned_id!` no longer adds `#[derive(Hash)]`; its derive list is now
+  `Clone, Copy, PartialEq, Eq, Debug`.
+- `reflect_hash` follows the new `Hash` impl and is content-based too.
+
+### Migration
+
+- Remove `Hash` from every derive list that includes `InternedId`:
+  `#[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]` becomes
+  `#[derive(InternedId, Clone, Copy, PartialEq, Eq, Debug)]`. Keeping it fails
+  to compile with a conflicting `Hash` implementation error (E0119).
+- Types declared with `interned_id!` need no changes.
+- Hash values differ from 0.5; do not compare persisted hashes across versions.
+
 ## [0.5.1] - 2026-08-28
 
 Documentation-only release; no code changes.
@@ -150,6 +175,7 @@ Initial release, compatible with **Bevy 0.16**.
   `Default`, serde `Serialize` / `Deserialize`, the full Bevy reflection
   hierarchy, and optional `bevy-inspector-egui` support.
 
+[0.6.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.5.1...v0.6.0
 [0.5.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.2.0...v0.3.0

@@ -1,5 +1,5 @@
 //! Benchmarks backing the performance claims in the README: O(1) equality,
-//! pointer hashing, and cheap `HashMap` lookups compared to `String` keys.
+//! content hashing, and cheap `HashMap` lookups compared to `String` keys.
 //!
 //! Run with: `cargo bench --bench id_performance`
 

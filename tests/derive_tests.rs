@@ -27,15 +27,15 @@ use bevy_reflect::TypeRegistry;
 use std::collections::{HashMap, HashSet};
 
 /// Test ID type for basic functionality.
-#[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(InternedId, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct TestId(bevy::ecs::intern::Interned<str>);
 
 /// Another ID type to verify separate interners.
-#[derive(InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(InternedId, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct OtherId(bevy::ecs::intern::Interned<str>);
 
 /// ID type with Component derive for ECS integration tests.
-#[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Component, InternedId, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct ComponentId(bevy::ecs::intern::Interned<str>);
 
 // Equivalent ID types declared through the `interned_id!` one-liner macro,
@@ -188,6 +188,80 @@ mod collections {
 
         assert_eq!(ids.len(), 3);
         assert_eq!(ids[0].as_str(), "first");
+    }
+}
+
+/// `Hash` must depend only on the string content, never on the interned
+/// pointer, so hashes and `HashMap` iteration order are reproducible across
+/// processes. All tests use a hasher with fixed keys.
+mod deterministic_hashing {
+    use super::*;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{BuildHasher, BuildHasherDefault};
+
+    type FixedState = BuildHasherDefault<DefaultHasher>;
+
+    const KEYS: [&str; 12] = [
+        "forest", "desert", "tundra", "swamp", "ocean", "mountain", "plains", "jungle", "savanna",
+        "taiga", "mesa", "volcano",
+    ];
+
+    #[test]
+    fn test_independently_interned_ids_hash_equally() {
+        // `TestId`, `OtherId` and `MacroId` each have their own interner, so
+        // these three values live at three different addresses.
+        let a = TestId::new("fireball");
+        let b = OtherId::new("fireball");
+        let c = MacroId::new("fireball");
+        assert_ne!(a.as_str().as_ptr(), b.as_str().as_ptr());
+        assert_ne!(a.as_str().as_ptr(), c.as_str().as_ptr());
+
+        let state = FixedState::default();
+        assert_eq!(state.hash_one(a), state.hash_one(b));
+        assert_eq!(state.hash_one(a), state.hash_one(c));
+        assert_eq!(state.hash_one(a), state.hash_one(TestId::new("fireball")));
+    }
+
+    #[test]
+    fn test_hash_equals_str_hash() {
+        let state = FixedState::default();
+        for key in KEYS.into_iter().chain(["", "日本語", "a/b:c"]) {
+            assert_eq!(state.hash_one(TestId::new(key)), state.hash_one(key));
+            assert_eq!(state.hash_one(MacroId::new(key)), state.hash_one(key));
+        }
+    }
+
+    /// Build a map with room for every key up front, so no resize happens and
+    /// the layout depends only on the key hashes, not on insertion order.
+    fn build<K: std::hash::Hash + Eq>(
+        entries: impl Iterator<Item = (K, usize)>,
+    ) -> HashMap<K, usize, FixedState> {
+        let mut map = HashMap::with_capacity_and_hasher(1024, FixedState::default());
+        map.extend(entries);
+        map
+    }
+
+    #[test]
+    fn test_hash_map_iteration_order_is_deterministic() {
+        let indexed = || KEYS.iter().copied().enumerate();
+
+        let forward = build(indexed().map(|(i, k)| (TestId::new(k), i)));
+        let reverse = build(indexed().rev().map(|(i, k)| (TestId::new(k), i)));
+        // Separate interner, so different pointers for the same content.
+        let other = build(indexed().rev().map(|(i, k)| (OtherId::new(k), i)));
+        // Plain `&str` keys: the order must not depend on interning at all.
+        let plain = build(indexed().map(|(i, k)| (k, i)));
+
+        let forward_order: Vec<(&str, usize)> =
+            forward.iter().map(|(k, v)| (k.as_str(), *v)).collect();
+        let reverse_order: Vec<(&str, usize)> =
+            reverse.iter().map(|(k, v)| (k.as_str(), *v)).collect();
+        let other_order: Vec<(&str, usize)> = other.iter().map(|(k, v)| (k.as_str(), *v)).collect();
+        let plain_order: Vec<(&str, usize)> = plain.iter().map(|(k, v)| (*k, *v)).collect();
+
+        assert_eq!(forward_order, reverse_order);
+        assert_eq!(forward_order, other_order);
+        assert_eq!(forward_order, plain_order);
     }
 }
 
