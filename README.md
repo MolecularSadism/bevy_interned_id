@@ -46,7 +46,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_interned_id = "0.6"
+bevy_interned_id = "0.7"
 bevy = "0.19" # 0.18 works too — see Bevy Version Compatibility
 serde = "1"   # needed by the default `serde` feature
 ```
@@ -304,7 +304,10 @@ The generated types work seamlessly with Bevy's systems:
 - **Reflection**: Full support for Bevy's reflection system
 - **Inspector**: Read-only display in bevy-inspector-egui (with `dev` feature)
 - **Serialization**: Works with Bevy scenes and save systems
-- **Type Registration**: Automatic registration with `ReflectDefault`
+- **Type Registration**: Registers `ReflectFromReflect`, `ReflectFromPtr`,
+  `ReflectDefault`, and (with the `serde` feature) `ReflectSerialize` and
+  `ReflectDeserialize`, so registry-driven code (`TypedReflectDeserializer`,
+  scenes, scripting bridges) can build an ID from its string form
 
 ## Best Practices
 
@@ -331,13 +334,23 @@ strings with the performance of enums.
 
 | `bevy_interned_id` | Bevy |
 |-------------------|------|
-| 0.3, 0.4, 0.5, 0.6 | 0.18, 0.19 |
+| 0.3, 0.4, 0.5, 0.6, 0.7 | 0.18, 0.19 |
 | 0.2               | 0.17 |
 | 0.1               | 0.16 |
 
 The Bevy column is the version each release is developed and tested against.
 Because this is a pure proc-macro crate, it adds no Bevy dependency of its
 own.
+
+### Migration from 0.6 to 0.7
+
+No code changes needed. With the `serde` feature (default), the type
+registration now also carries `ReflectSerialize` and `ReflectDeserialize`.
+Serialized formats are unchanged.
+
+```toml
+bevy_interned_id = "0.7"
+```
 
 ### Migration from 0.5 to 0.6
 

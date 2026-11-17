@@ -813,3 +813,214 @@ mod bevy_0_19_migration {
         assert_eq!(*cloned.downcast_ref::<TestId>().unwrap(), id);
     }
 }
+
+/// Registry-driven (de)serialization through `ReflectSerialize` /
+/// `ReflectDeserialize`, as used by scenes and scripting bridges that build
+/// reflected values from plain strings.
+#[cfg(feature = "serde")]
+mod reflect_serde {
+    use super::*;
+    use bevy_ecs::reflect::from_reflect_with_fallback;
+    use bevy_reflect::serde::{
+        ReflectDeserializer, ReflectSerializer, TypedReflectDeserializer, TypedReflectSerializer,
+    };
+    use bevy_reflect::structs::{DynamicStruct, Struct};
+    use bevy_reflect::{ReflectDeserialize, ReflectSerialize};
+    use serde::de::DeserializeSeed;
+
+    /// A reflected struct with an ID field, the shape of an event a script
+    /// would construct.
+    #[derive(Reflect, Debug, PartialEq)]
+    struct PlaySound {
+        sound: TestId,
+        volume: f32,
+    }
+
+    fn registry() -> TypeRegistry {
+        let mut registry = TypeRegistry::new();
+        registry.register::<TestId>();
+        registry.register::<PlaySound>();
+        registry
+    }
+
+    #[test]
+    fn registration_has_serde_type_data() {
+        let registration = TestId::get_type_registration();
+        assert!(registration.data::<ReflectSerialize>().is_some());
+        assert!(registration.data::<ReflectDeserialize>().is_some());
+    }
+
+    /// `ReflectDeserialize` looked up in the registry builds an ID from a
+    /// plain JSON/RON string.
+    #[test]
+    fn reflect_deserialize_from_plain_string() {
+        let registry = registry();
+        let registration = registry.get(std::any::TypeId::of::<TestId>()).unwrap();
+        let reflect_deserialize = registration.data::<ReflectDeserialize>().unwrap();
+
+        let mut json = serde_json::Deserializer::from_str("\"fireball\"");
+        let value: Box<dyn Reflect> = reflect_deserialize.deserialize(&mut json).unwrap();
+        assert_eq!(
+            *value.downcast_ref::<TestId>().unwrap(),
+            TestId::new("fireball")
+        );
+
+        let mut ron = ron::de::Deserializer::from_str("\"frostbolt\"").unwrap();
+        let value: Box<dyn Reflect> = reflect_deserialize.deserialize(&mut ron).unwrap();
+        assert_eq!(
+            *value.downcast_ref::<TestId>().unwrap(),
+            TestId::new("frostbolt")
+        );
+    }
+
+    /// The same, from a `serde::de::value::StrDeserializer`: a bridge holding a
+    /// `&str` (not JSON/RON text) can use this directly.
+    #[test]
+    fn reflect_deserialize_from_str_deserializer() {
+        use serde::de::IntoDeserializer;
+        let registry = registry();
+        let reflect_deserialize = registry
+            .get_type_data::<ReflectDeserialize>(std::any::TypeId::of::<TestId>())
+            .unwrap();
+
+        let de: serde::de::value::StrDeserializer<'_, serde::de::value::Error> =
+            "spark".into_deserializer();
+        let value = reflect_deserialize.deserialize(de).unwrap();
+        assert_eq!(
+            *value.downcast_ref::<TestId>().unwrap(),
+            TestId::new("spark")
+        );
+    }
+
+    /// `TypedReflectDeserializer` (scene/asset path) on the ID alone.
+    #[test]
+    fn typed_reflect_deserializer_on_id() {
+        let registry = registry();
+        let registration = registry.get(std::any::TypeId::of::<TestId>()).unwrap();
+        let mut ron = ron::de::Deserializer::from_str("\"ember\"").unwrap();
+        let value = TypedReflectDeserializer::new(registration, &registry)
+            .deserialize(&mut ron)
+            .unwrap();
+        let id = TestId::from_reflect(value.as_partial_reflect()).unwrap();
+        assert_eq!(id, TestId::new("ember"));
+    }
+
+    /// An ID nested in a reflected struct deserializes from its string and the
+    /// struct is rebuilt through `bevy_ecs::reflect::from_reflect_with_fallback`
+    /// (the path `ReflectEvent`/`ReflectMessage` take).
+    #[test]
+    fn nested_id_in_reflected_struct() {
+        let registry = registry();
+        let registration = registry.get(std::any::TypeId::of::<PlaySound>()).unwrap();
+        let mut ron = ron::de::Deserializer::from_str("(sound: \"thunder\", volume: 0.5)").unwrap();
+        let value = TypedReflectDeserializer::new(registration, &registry)
+            .deserialize(&mut ron)
+            .unwrap();
+        let mut world = World::new();
+        let event: PlaySound =
+            from_reflect_with_fallback(value.as_partial_reflect(), &mut world, &registry);
+        assert_eq!(
+            event,
+            PlaySound {
+                sound: TestId::new("thunder"),
+                volume: 0.5
+            }
+        );
+    }
+
+    /// Reflection serialization writes the plain string, and the untyped
+    /// `ReflectSerializer`/`ReflectDeserializer` pair round-trips.
+    #[test]
+    fn reflect_serializer_round_trip() {
+        let registry = registry();
+        let id = TestId::new("arcane_missile");
+
+        let typed = serde_json::to_string(&TypedReflectSerializer::new(&id, &registry)).unwrap();
+        assert_eq!(typed, "\"arcane_missile\"");
+        let typed_ron = ron::to_string(&TypedReflectSerializer::new(&id, &registry)).unwrap();
+        assert_eq!(typed_ron, "\"arcane_missile\"");
+
+        let untyped = ron::to_string(&ReflectSerializer::new(&id, &registry)).unwrap();
+        let mut de = ron::de::Deserializer::from_str(&untyped).unwrap();
+        let value = ReflectDeserializer::new(&registry)
+            .deserialize(&mut de)
+            .unwrap();
+        assert_eq!(TestId::from_reflect(value.as_partial_reflect()), Some(id));
+    }
+
+    /// `FromReflect` and `from_reflect_with_fallback` round-trip the ID, both
+    /// directly and as a field of a `DynamicStruct`.
+    #[test]
+    fn from_reflect_round_trips() {
+        let registry = registry();
+        let id = TestId::new("blink");
+
+        let mut world = World::new();
+
+        assert_eq!(TestId::from_reflect(id.as_partial_reflect()), Some(id));
+        let back: TestId =
+            from_reflect_with_fallback(id.as_partial_reflect(), &mut world, &registry);
+        assert_eq!(back, id);
+        let cloned = id.reflect_clone().unwrap();
+        let back: TestId =
+            from_reflect_with_fallback(cloned.as_partial_reflect(), &mut world, &registry);
+        assert_eq!(back, id);
+
+        let event = PlaySound {
+            sound: id,
+            volume: 1.0,
+        };
+        let dynamic: DynamicStruct = event.to_dynamic_struct();
+        assert_eq!(
+            PlaySound::from_reflect(dynamic.as_partial_reflect()),
+            Some(event)
+        );
+        let rebuilt: PlaySound =
+            from_reflect_with_fallback(dynamic.as_partial_reflect(), &mut world, &registry);
+        assert_eq!(
+            rebuilt,
+            PlaySound {
+                sound: id,
+                volume: 1.0
+            }
+        );
+    }
+
+    /// Plain serde formats are unchanged: an ID is still a bare string in JSON
+    /// and RON, inside structs too.
+    #[test]
+    fn plain_serde_formats_unchanged() {
+        let id = TestId::new("heal");
+        assert_eq!(serde_json::to_string(&id).unwrap(), "\"heal\"");
+        assert_eq!(ron::to_string(&id).unwrap(), "\"heal\"");
+        assert_eq!(serde_json::from_str::<TestId>("\"heal\"").unwrap(), id);
+        assert_eq!(ron::from_str::<TestId>("\"heal\"").unwrap(), id);
+
+        #[derive(serde::Serialize, serde::Deserialize, PartialEq, Debug)]
+        struct Wrapper {
+            id: TestId,
+        }
+        let w = Wrapper { id };
+        assert_eq!(ron::to_string(&w).unwrap(), "(id:\"heal\")");
+        assert_eq!(ron::from_str::<Wrapper>("(id: \"heal\")").unwrap(), w);
+        assert_eq!(serde_json::to_string(&w).unwrap(), "{\"id\":\"heal\"}");
+    }
+}
+
+/// Without the `serde` feature no serde type data is registered (the impls
+/// it would wrap do not exist).
+#[cfg(not(feature = "serde"))]
+#[test]
+fn no_serde_type_data_without_feature() {
+    let registration = TestId::get_type_registration();
+    assert!(
+        registration
+            .data::<bevy_reflect::ReflectSerialize>()
+            .is_none()
+    );
+    assert!(
+        registration
+            .data::<bevy_reflect::ReflectDeserialize>()
+            .is_none()
+    );
+}

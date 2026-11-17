@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - Unreleased
+
+### Added
+
+- With the `serde` feature (default), `GetTypeRegistration` now also registers
+  `ReflectSerialize` and `ReflectDeserialize`. Registry-driven code such as
+  `TypedReflectDeserializer`, scene loading and scripting bridges can now build
+  an ID from its plain string and serialize it back. Previously only
+  `ReflectFromReflect`, `ReflectFromPtr` and `ReflectDefault` were registered,
+  so reflection deserialization of an ID (or of a reflected struct containing
+  one) failed.
+
+### Unchanged
+
+- Serialized formats: an ID is still a bare string in JSON and RON.
+
 ## [0.6.0] - 2026-09-25
 
 ### Changed
@@ -175,6 +191,7 @@ Initial release, compatible with **Bevy 0.16**.
   `Default`, serde `Serialize` / `Deserialize`, the full Bevy reflection
   hierarchy, and optional `bevy-inspector-egui` support.
 
+[0.7.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.5.1...v0.6.0
 [0.5.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/MolecularSadism/bevy_interned_id/compare/v0.3.0...v0.4.0
