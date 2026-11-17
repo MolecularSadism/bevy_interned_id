@@ -247,8 +247,30 @@ fn generate_reflect_impl(name: &Ident) -> TokenStream2 {
     }
 }
 
+/// Generate the `ReflectSerialize`/`ReflectDeserialize` registrations.
+///
+/// Opaque reflected types are (de)serialized through these type data, so
+/// without them `TypedReflectDeserializer`, scene loading and other
+/// registry-driven code cannot build an ID from its string form. They wrap the
+/// serde impls, so they are only emitted with the `serde` feature.
+#[cfg(feature = "serde")]
+fn generate_serde_type_data() -> TokenStream2 {
+    quote! {
+        registration.insert::<bevy::reflect::ReflectSerialize>(
+            bevy::reflect::FromType::<Self>::from_type(),
+        );
+        registration.insert::<bevy::reflect::ReflectDeserialize>(
+            bevy::reflect::FromType::<Self>::from_type(),
+        );
+    }
+}
+
 /// Generate `Typed`, `TypePath`, `FromReflect`, and `GetTypeRegistration` implementations.
 fn generate_reflection_meta_impls(name: &Ident, name_str: &str) -> TokenStream2 {
+    #[cfg(feature = "serde")]
+    let serde_type_data = generate_serde_type_data();
+    #[cfg(not(feature = "serde"))]
+    let serde_type_data = quote! {};
     quote! {
         impl bevy::reflect::Typed for #name {
             fn type_info() -> &'static bevy::reflect::TypeInfo {
@@ -288,6 +310,7 @@ fn generate_reflection_meta_impls(name: &Ident, name_str: &str) -> TokenStream2 
                 registration.insert::<bevy::prelude::ReflectDefault>(
                     bevy::reflect::FromType::<Self>::from_type(),
                 );
+                #serde_type_data
                 registration
             }
         }
@@ -345,7 +368,9 @@ fn generate_inspector_impl(name: &Ident) -> TokenStream2 {
 /// 4. `Hash` over the string content (not the interned pointer), so hashes and
 ///    `HashMap`/`HashSet` iteration order are identical across processes
 /// 5. Serialization: Serialize, Deserialize (`serde` feature, on by default)
-/// 6. Bevy reflection: Full reflection hierarchy
+/// 6. Bevy reflection: Full reflection hierarchy, registering `ReflectFromReflect`,
+///    `ReflectFromPtr`, `ReflectDefault`, and (with `serde`) `ReflectSerialize`
+///    and `ReflectDeserialize`
 /// 7. Inspector UI (`dev` feature only)
 ///
 /// # Examples
